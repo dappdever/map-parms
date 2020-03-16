@@ -1,10 +1,12 @@
 package main
 
 import (
+	"context"
 	"encoding/hex"
 	"fmt"
-	"github.com/eoscanada/eos-go"
 	"log"
+
+	"github.com/eoscanada/eos-go"
 )
 
 // PubMapActionPayload ...
@@ -26,29 +28,30 @@ func newPubMap(payload map[string]string) *eos.Action {
 }
 
 func PublishMapToBlockchain(payload map[string]string) (string, error) {
+	ctx := context.Background()
 	api := eos.New("https://kylin.eosusa.news")
 
 	keyBag := &eos.KeyBag{}
-	err := keyBag.ImportPrivateKey("5KAP1zytghuvowgprSPLNasajibZcxf4KMgdgNbrNj98xhcGAUa")
+	err := keyBag.ImportPrivateKey(ctx, "5KAP1zytghuvowgprSPLNasajibZcxf4KMgdgNbrNj98xhcGAUa")
 	if err != nil {
 		log.Printf("import private key: %s", err)
 	}
 	api.SetSigner(keyBag)
 
 	txOpts := &eos.TxOptions{}
-	if err := txOpts.FillFromChain(api); err != nil {
+	if err := txOpts.FillFromChain(ctx, api); err != nil {
 		log.Printf("Error filling tx opts: %s", err)
 		return "error", err
 	}
 
 	tx := eos.NewTransaction([]*eos.Action{newPubMap(payload)}, txOpts)
-	_, packedTx, err := api.SignTransaction(tx, txOpts.ChainID, eos.CompressionNone)
+	_, packedTx, err := api.SignTransaction(ctx, tx, txOpts.ChainID, eos.CompressionNone)
 	if err != nil {
 		log.Printf("Error signing transaction: %s", err)
 		return "error", err
 	}
 
-	response, err := api.PushTransaction(packedTx)
+	response, err := api.PushTransaction(ctx, packedTx)
 	if err != nil {
 		log.Printf("Error pushing transaction: %s", err)
 		return "error", err
